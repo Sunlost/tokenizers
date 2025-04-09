@@ -842,6 +842,25 @@ where
         self.post_process(encoding, pair_encoding, add_special_tokens)
     }
 
+
+    pub fn encode_bytes<'s>(&self, input_bytes: &'s [u8], add_special_tokens: bool) -> Result<Encoding> {
+        let text = unsafe { std::str::from_utf8_unchecked(input_bytes) };
+
+        let encode_input = EncodeInput::Single(InputSequence::Raw(Cow::Borrowed(text)));
+        let (sequence, pair) = match encode_input {
+            EncodeInput::Single(s1) => (s1, None),
+            EncodeInput::Dual(s1, s2) => (s1, Some(s2)),
+        };
+
+        let encoding = self.encode_single_sequence(sequence, 0, OffsetType::Byte)?;
+        let pair_encoding = pair
+            .map(|sequence| self.encode_single_sequence(sequence, 1, OffsetType::Byte))
+            .transpose()?;
+
+        self.post_process(encoding, pair_encoding, add_special_tokens)
+    }
+
+
     /// Encode the given input, using offsets relative to chars instead of bytes.
     /// This method accepts both single sequences, as well as pair sequences. Also,
     /// a sequence can be a string, or already pre-tokenized input directly:
